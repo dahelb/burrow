@@ -1,49 +1,28 @@
 package main
 
 import (
-	"fmt"
-	"os"
+	"io/fs"
 	"testing"
+	"testing/fstest"
 )
 
-func TestCleanFilePath(t *testing.T) {
-	cwd, err := os.Getwd()
+func TestDirListing(t *testing.T) {
+	testFs := fstest.MapFS{
+		"bar.txt": {},
+		"foo":     {Mode: fs.ModeDir},
+	}
+
+	hole := FileSystemGopherHole{rootFs: testFs, host: "localhost", port: 7070}
+
+	listing, err := hole.getDirListing(".")
 
 	if err != nil {
-		t.Fatal("Could not get cwd")
+		t.Error(err)
 	}
 
-	var tests = []struct {
-		path, rootDir string
-		want          string
-		err           error
-	}{
-		{"/foo/bar", "/foo/bar", "/foo/bar", nil},
-		{"/foo/bar/", "/foo/bar", "/foo/bar", nil},
-		{"/foo/bar", "/foo", "/foo/bar", nil},
-		{".", cwd, cwd, nil},
-		{".", "..", cwd, nil},
-		{"/", "/foo", "", RootDirEscape},
-		{"/foo/bar/..", "/foo/bar/", "", RootDirEscape},
-		{"..", ".", "", RootDirEscape},
+	want := "0bar.txt\tbar.txt\tlocalhost\t7070\r\n1foo\tfoo\tlocalhost\t7070\r\n.\r\n"
+
+	if listing != want {
+		t.Errorf("Got '%s', want '%s'", listing, want)
 	}
-
-	for _, tt := range tests {
-		testname := fmt.Sprintf("(path=\"%s\",rootDir=\"%s\")", tt.path, tt.rootDir)
-		t.Run(testname, func(t *testing.T) {
-
-			hole, err := newFileSystemGopherHole(tt.rootDir, "", 0)
-
-			if err != nil {
-				t.Fatal(err)
-			}
-
-			path, err := hole.cleanFilePath(tt.path)
-
-			if path != tt.want || err != tt.err {
-				t.Errorf("got (\"%v\",\"%v\"), want (\"%v\",\"%v\")", path, err, tt.want, tt.err)
-			}
-		})
-	}
-
 }
