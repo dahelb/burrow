@@ -17,11 +17,11 @@ func main() {
 		log.Fatal(err)
 	}
 
-	fileMap := make(map[string]string)
-	fileMap[""] = "0About\t/about\tlocalhost\t7070\r\n.\r\n"
-	fileMap["/about"] = "Hello here is some information about me!\r\n.\r\n"
+	hole, err := CreateFsGopherHole("./gopherhole/", "localhost", 7070)
 
-	staticHole := StaticGopherHole{fileMap}
+	if err != nil {
+		log.Fatal("error creating gopher hole: %w", err)
+	}
 
 	for {
 		conn, err := ln.Accept()
@@ -29,7 +29,7 @@ func main() {
 		if err != nil {
 			log.Print(err)
 		}
-		go handleConnection(conn, &staticHole)
+		go handleConnection(conn, hole)
 	}
 
 }
