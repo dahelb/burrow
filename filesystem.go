@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	"fmt"
 	"io"
@@ -57,6 +58,7 @@ func (h *FileSystemGopherHole) Serve(ctx context.Context, selector string, conn 
 
 	if fileInfo.IsDir() {
 		log.Printf("getting dir listing for %s", filePath)
+
 		listing, err := h.getDirListing(filePath)
 
 		if err != nil {
@@ -97,6 +99,14 @@ func (h *FileSystemGopherHole) getDirListing(dirPath string) (string, error) {
 
 	for _, e := range entries {
 		selector := filepath.Join(dirPath, e.Name())
+		if e.Name() == "README.txt" {
+			readmeContent, err := h.readReadmeFile(selector)
+
+			if err == nil {
+				listing += readmeContent
+			}
+			continue
+		}
 
 		if e.IsDir() {
 			listing += fmt.Sprintf("1%v\t%v\t%v\t%v\r\n", e.Name(), selector, h.host, h.port)
@@ -116,4 +126,27 @@ func (h *FileSystemGopherHole) getDirListing(dirPath string) (string, error) {
 	listing += ".\r\n"
 
 	return listing, nil
+}
+
+func (h *FileSystemGopherHole) readReadmeFile(filePath string) (string, error) {
+	indexFile, err := h.rootFs.Open(filePath)
+
+	var readmeContent string
+
+	if err != nil {
+		log.Printf("Error opening %s: %s", filePath, err)
+		return "", err
+	} else {
+		defer indexFile.Close()
+
+		scanner := bufio.NewScanner(indexFile)
+
+		for scanner.Scan() {
+			line := scanner.Text()
+
+			readmeContent += "i" + line + "\r\n"
+		}
+	}
+
+	return readmeContent, nil
 }
